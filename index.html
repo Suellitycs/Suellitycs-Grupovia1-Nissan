@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>NISSAN | IOC - Intelligence Operations Center</title>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root { 
+            --red: #C1121F; --gray: #333; --light: #F4F4F4; --dark: #0a0b0d; --white: #FFF; 
+            --border: rgba(255,255,255,0.1); --success: #10B981; --warning: #F59E0B; --danger: #EF4444; 
+            --card-bg: rgba(30, 32, 35, 0.8);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Ubuntu', sans-serif; }
+        body { background: radial-gradient(circle at top right, #1a1c20, var(--dark)); color: #ccc; overflow: hidden; height: 100vh; }
+
+        /* Splash Screen Tecnológico */
+        #splash { position: fixed; inset: 0; background: var(--dark); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; transition: 1.5s cubic-bezier(0.7, 0, 0.3, 1); }
+        #splash img { width: 280px; margin-bottom: 20px; }
+        .boot-loader { width: 300px; height: 2px; background: #222; margin-top: 10px; position: relative; overflow: hidden; }
+        .boot-progress { width: 0%; height: 100%; background: var(--red); position: absolute; animation: load 3s forwards; box-shadow: 0 0 10px var(--red); }
+        @keyframes load { to { width: 100%; } }
+        #boot-logs { font-family: 'Orbitron'; font-size: 9px; color: var(--success); margin-top: 15px; height: 20px; text-align: center; opacity: 0.7; }
+
+        /* Header High-Tech */
+        header { 
+            background: rgba(10, 11, 13, 0.95); backdrop-filter: blur(15px); height: 90px; 
+            display: flex; align-items: center; padding: 0 30px; justify-content: space-between; 
+            border-bottom: 4px solid var(--red); z-index: 900; position: relative;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        .logos { display: flex; align-items: center; gap: 15px; }
+        .logos img { height: 45px; border-radius: 4px; }
+
+        /* Meta Superior */
+        .meta-area { flex-grow: 1; margin: 0 60px; max-width: 600px; position: relative; cursor: help; }
+        .meta-info { display: flex; justify-content: space-between; font-size: 11px; font-family: 'Orbitron'; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; color: #888; }
+        .meta-bar { height: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; position: relative; overflow: hidden; border: 1px solid var(--border); }
+        .meta-fill { height: 100%; background: linear-gradient(90deg, #444, var(--red)); width: 78%; transition: 2s; position: relative; }
+        .meta-fill::after { content: ''; position: absolute; top:0; left:-100%; width:50%; height:100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); animation: sweep 3s infinite; }
+        @keyframes sweep { to { left: 150%; } }
+
+        /* Tooltip Global Estilo HUD */
+        #global-tip { 
+            position: fixed; display: none; background: rgba(10,10,15,0.98); color: #fff; padding: 15px; 
+            border-radius: 4px; font-size: 12px; line-height: 1.5; z-index: 99999; 
+            width: 320px; pointer-events: none; border: 1px solid var(--border); 
+            border-left: 4px solid var(--red); box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Sidebar */
+        .wrapper { display: flex; height: calc(100vh - 90px); }
+        .sidebar { width: 260px; background: rgba(10,11,13,0.5); padding: 25px 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .nav-btn { width: 90%; margin: 5px auto; padding: 15px 20px; border: 1px solid transparent; background: transparent; color: #666; text-align: left; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 11px; border-radius: 6px; font-family: 'Orbitron'; }
+        .nav-btn.active { background: rgba(193, 18, 31, 0.15); border: 1px solid var(--red); color: white; box-shadow: inset 0 0 15px rgba(193, 18, 31, 0.2); }
+        
+        .main { flex-grow: 1; padding: 30px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--red) transparent; }
+
+        /* KPIs */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); cursor: help; transition: 0.4s; position: relative; overflow: hidden; }
+        .card:hover { border-color: var(--red); transform: translateY(-3px); background: rgba(45,47,50,0.9); }
+        .card .val { font-size: 28px; font-weight: 700; color: #fff; font-family: 'Orbitron'; margin-top: 5px; }
+        .card h3 { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+
+        @keyframes neon-pulse { 0%, 100% { border-color: var(--border); box-shadow: none; } 50% { border-color: var(--red); box-shadow: 0 0 20px rgba(193, 18, 31, 0.4); } }
+        .alert-blink { animation: neon-pulse 1.5s infinite !important; }
+
+        /* Diagnóstico Estratégico */
+        .diag-box { background: linear-gradient(145deg, rgba(30,32,35,0.9), rgba(15,17,20,0.9)); border-radius: 12px; padding: 25px; margin-bottom: 25px; border-top: 3px solid var(--red); }
+        .diag-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; }
+        .diag-item h4 { color: var(--red); font-size: 12px; font-family: 'Orbitron'; margin-bottom: 10px; text-transform: uppercase; }
+        .diag-item p { font-size: 11.5px; color: #aaa; line-height: 1.5; margin-bottom: 8px; }
+        .diag-solucao { font-size: 10px; font-weight: bold; color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 6px 10px; border-radius: 4px; border-left: 3px solid var(--success); display: inline-block; }
+
+        /* Gráficos */
+        .charts-row { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 25px; }
+        .chart-card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); min-height: 380px; display: flex; flex-direction: column; align-items: center; }
+        .chart-card h4 { font-size: 13px; font-family: 'Orbitron'; margin-bottom: 20px; align-self: flex-start; border-left: 4px solid var(--red); padding-left: 15px; color: #fff; }
+        
+        .gauge-visual { width: 220px; height: 110px; background: rgba(255,255,255,0.05); border-radius: 110px 110px 0 0; position: relative; overflow: hidden; margin-top: 20px; cursor: help; }
+        .gauge-fill { position: absolute; top: 100%; left: 0; width: 100%; height: 100%; background: var(--red); transform-origin: top center; transform: rotate(0deg); transition: 2.5s cubic-bezier(0.1, 0, 0.3, 1); }
+        .gauge-cover { position: absolute; top: 20px; left: 20px; right: 20px; bottom: 0; background: #0f1114; border-radius: 95px 95px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 10px; }
+
+        .bar-chart-wrap { display: flex; align-items: flex-end; justify-content: space-between; height: 180px; width: 100%; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-top: 30px; }
+        .bar-item { width: 16%; background: #222; border-radius: 4px 4px 0 0; position: relative; cursor: help; transition: 0.3s; }
+        .bar-item.highlight { background: var(--red); box-shadow: 0 0 15px rgba(193, 18, 31, 0.4); }
+        .bar-val { position: absolute; top: -25px; width: 100%; text-align: center; font-size: 13px; font-weight: bold; color: #fff; font-family: 'Orbitron'; }
+        .bar-day { position: absolute; bottom: -35px; width: 100%; text-align: center; font-size: 10px; color: #666; font-family: 'Orbitron'; }
+
+        /* Tabela Operação Real */
+        .op-table-wrap { background: var(--card-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border); overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th { position: sticky; top: 0; background: #15171a; z-index: 10; text-align: left; padding: 15px; font-size: 10px; font-family: 'Orbitron'; color: #666; border-bottom: 2px solid var(--border); text-transform: uppercase; }
+        td { padding: 18px 15px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #ccc; }
+        .ef-bar-bg { width: 120px; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .ef-bar-fill { height: 100%; border-radius: 2px; transition: 1s; }
+        .status-pill { padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 10px; font-family: 'Orbitron'; text-transform: uppercase; }
+        .pill-prod { color: var(--success); border: 1px solid var(--success); background: rgba(16, 185, 129, 0.1); }
+        .pill-delay { color: var(--danger); border: 1px solid var(--danger); background: rgba(239, 68, 68, 0.1); }
+        .pill-parts { color: var(--warning); border: 1px solid var(--warning); background: rgba(245, 158, 11, 0.1); }
+        .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+
+        .hidden { display: none; }
+        select { background: #15171a; color: #fff; border: 1px solid var(--border); padding: 5px; border-radius: 4px; font-size: 11px; font-family: 'Orbitron'; }
+    </style>
+</head>
+<body onmousemove="moveTip(event)">
+
+    <audio id="snd-click" src="https://www.soundjay.com" preload="auto"></audio>
+    <audio id="snd-alert" src="https://www.soundjay.com" preload="auto"></audio>
+
+    <div id="global-tip"></div>
+
+    <div id="splash">
+        <img src="./vermelho.gif" onerror="this.src='https://www.nissan-global.com'">
+        <div id="boot-logs">> INICIALIZANDO SISTEMA...</div>
+        <div class="boot-loader"><div class="boot-progress"></div></div>
+    </div>
+
+    <header>
+        <div class="logos">
+            <img src="./logo.jpg">
+            <img src="./VIA.jpg" style="height:40px">
+        </div>
+        
+        <div class="meta-area" onmouseover="showTip('meta')" onmouseout="hideTip()">
+            <div class="meta-info"><span>Saúde do Faturamento vs Meta</span><span>R$ 390.450 / R$ 500.000</span></div>
+            <div class="meta-bar">
+                <div class="meta-fill"></div>
+            </div>
+        </div>
+        
+        <div style="text-align: right">
+            <select onchange="document.getElementById('active-unit').innerText = this.value; document.getElementById('snd-click').play();">
+                <option>NISSAN RECIFE MATRIZ</option>
+                <option>NISSAN OLINDA</option>
+                <option>NISSAN JABOATÃO</option>
+            </select>
+            <div style="font-size: 12px; font-family: 'Orbitron'; font-weight: bold; color: var(--red); margin-top: 5px;" id="active-unit">NISSAN RECIFE MATRIZ</div>
+        </div>
+    </header>
+    <div class="wrapper">
+        <aside class="sidebar">
+            <button class="nav-btn active" id="btn-dash" onclick="changeTab('dash')">📊 DASHBOARD DIRETORIA</button>
+            <button class="nav-btn" id="btn-oper" onclick="changeTab('oper')">⚙️ OPERAÇÃO REAL-TIME</button>
+            <div style="margin-top: auto; padding: 25px; border-top: 1px solid var(--border);">
+                <p style="font-size: 10px; color: #555; font-family: 'Orbitron';">MÊS DE COMPETÊNCIA</p>
+                <p style="font-size: 12px; color: #fff; font-weight: bold; font-family: 'Orbitron';">MARÇO / 2026</p>
+            </div>
+        </aside>
+
+        <main class="main">
+            <!-- DASHBOARD -->
+            <div id="view-dash">
+                <div class="kpi-grid">
+                    <div class="card" onmouseover="showTip('faturamento')" onmouseout="hideTip()">
+                        <h3>Faturamento Bruto</h3>
+                        <div class="val">R$ 390.450</div>
+                        <div style="color:var(--success); font-size:11px; font-weight:bold; margin-top:5px;">▲ 12.4% vs Mar/23</div>
+                    </div>
+                    <div class="card" onmouseover="showTip('ticket')" onmouseout="hideTip()">
+                        <h3>Ticket Médio</h3>
+                        <div class="val">R$ 2.440</div>
+                        <div style="color:var(--red); font-size:11px; font-weight:bold; margin-top:5px;">Líder: Frontier</div>
+                    </div>
+                    <div class="card alert-blink" onmouseover="showTip('retencao'); document.getElementById('snd-alert').play();" onmouseout="hideTip()">
+                        <h3>Retenção Crítica</h3>
+                        <div class="val" style="color:var(--red)">14 O.S.</div>
+                        <div style="color:var(--red); font-size:11px; font-weight:bold; margin-top:5px;">⚠️ Ver Placas em Atraso</div>
+                    </div>
+                    <div class="card" onmouseover="showTip('eficiencia')" onmouseout="hideTip()">
+                        <h3>Eficiência Oficina</h3>
+                        <div class="val">84.2%</div>
+                        <div style="color:#3498db; font-size:11px; font-weight:bold; margin-top:5px;">Ideal: 90%</div>
+                    </div>
+                </div>
+
+                <div class="diag-box">
+                    <h2 style="font-size: 16px; font-family: 'Orbitron'; margin-bottom: 20px; color:#fff;">Diagnóstico Estratégico (Onde agir primeiro?)</h2>
+                    <div class="diag-grid">
+                        <div class="diag-item">
+                            <h4>🚨 GARGALO: PEÇAS RETIDAS</h4>
+                            <p>Causa: R$ 28k travados por filtros Frontier em falta no estoque local.</p>
+                            <div class="diag-solucao">Ação: Gerar Pedido Express (VIA LOG) e bonificar Consultor pela liberação.</div>
+                        </div>
+                        <div class="diag-item">
+                            <h4>⚖️ GARGALO: CARGA DE TRABALHO</h4>
+                            <p>Causa: Mecânica em 105%. Técnicos Master estão sobrecarregados com diagnósticos simples.</p>
+                            <div class="diag-solucao">Ação: Mover revisões rápidas (10k/20k) para Diego Silva e aliviar os boxes 03/04.</div>
+                        </div>
+                        <div class="diag-item">
+                            <h4>🎯 GARGALO: META DE PERFORMANCE</h4>
+                            <p>Causa: Projeção de CRM indica risco de perda do bônus de fábrica se faturamento atrasar dia 31.</p>
+                            <div class="diag-solucao">Ação: Antecipar agendamentos CRM do dia 30 para o dia 28. Priorizar Frontier.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card" onmouseover="showTip('forecast')" onmouseout="hideTip()">
+                        <h4>Previsão de Fechamento</h4>
+                        <div class="gauge-visual">
+                            <div class="gauge-fill" id="g-fill"></div>
+                            <div class="gauge-cover"><div style="font-size: 26px; font-weight: 700; font-family:'Orbitron'; color:#fff;">R$ 522k</div></div>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h4>Agenda Próximos 5 Dias</h4>
+                        <div class="bar-chart-wrap" id="bar-wrap"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center; margin-bottom:15px">
+                            <h4>🏆 Ranking Faturamento</h4>
+                            <button onclick="renderRanking('Mecânica'); document.getElementById('snd-click').play();" style="cursor:pointer; background:transparent; border:1px solid var(--red); color:var(--red); font-size:8px; padding:2px 5px; font-family:'Orbitron';">MEC</button>
+                        </div>
+                        <ul class="ranking-list" id="ranking-list" style="list-style:none; width:100%;"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OPERAÇÃO REAL -->
+            <div id="view-oper" class="hidden">
+                <div class="op-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Técnico Responsável</th>
+                                <th>Modelo / Placa</th>
+                                <th>Serviço / Categoria</th>
+                                <th>Faturamento O.S.</th>
+                                <th>Eficiência Ativa</th>
+                                <th>Status Operacional</th>
+                                <th>Previsão Entrega</th>
+                            </tr>
+                        </thead>
+                        <tbody id="op-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+<script>
+    const operacaoData = [
+        { t: "Paulo Cesar", m: "Frontier (FRN-9090)", s: "Funilaria / Pintura", v: "R$ 5.200", e: 98, st: "Produzindo", p: "No Prazo", c: "success", prio: "NORMAL", d: "<b>Status:</b> Operando acima da meta.<br><b>Próxima Ação:</b> Manter fluxo atual até finalização." },
+        { t: "Alexandre Silva", m: "Frontier (FRN-4433)", s: "Suspensão / Freio", v: "R$ 4.100", e: 72, st: "Retido/Peças", p: "Retido", c: "warning", prio: "ALTA", d: "<b>Status:</b> Box travado.<br><b>Próxima Ação:</b> Mover técnico para auxiliar em diagnósticos rápidos." },
+        { t: "Carlos Eduardo", m: "Kicks (KKS-2024)", s: "Revisão 40k", v: "R$ 2.450", e: 92, st: "Produzindo", p: "No Prazo", c: "success", prio: "EXPRESSA", d: "<b>Status:</b> Revisão Expressa em andamento.<br><b>Próxima Ação:</b> Acionar Lavagem para entrega às 16:30h." },
+        { t: "Sérgio Aleixo", m: "Kicks (KKS-5566)", s: "Revisão 20k", v: "R$ 1.800", e: 58, st: "Atraso", p: "Crítico (+24h)", c: "danger", prio: "NORMAL", d: "<b>Status:</b> Baixa produtividade detectada.<br><b>Próxima Ação:</b> Supervisor deve validar dificuldade técnica." },
+        { t: "Roberto Junior", m: "Versa (VRS-1122)", s: "Garantia / Injeção", v: "R$ 1.200", e: 64, st: "Atraso", p: "Crítico (+24h)", c: "danger", d: "Dificuldade em diagnóstico eletrônico." },
+        { t: "Diego Silva", m: "Versa (VRS-8800)", s: "Revisão 10k", v: "R$ 950", e: 94, st: "Produzindo", p: "No Prazo", c: "success", prio: "NORMAL", d: "<b>Status:</b> Ritmo acelerado.<br><b>Próxima Ação:</b> Alocar próxima O.S. de revisão em 15min." }
+    ];
+
+    const infoDicas = {
+        meta: "<b>🎯 Gestão de Meta</b><br>Realizado: <b>R$ 390.450</b> (78.1%)<br>Faltam: R$ 109.550.<br>💡 Estamos 8% acima do ritmo esperado.",
+        faturamento: "<b>💰 Detalhes Financeiros</b><br>• Peças: R$ 253.792 (65%)<br>• Mão de Obra: R$ 136.658 (35%)",
+        ticket: "<b>📈 Ticket por Modelo</b><br>• Frontier: R$ 4.120<br>• Kicks: R$ 2.150<br>• Versa: R$ 1.680",
+        retencao: "<b>⚠️ VEÍCULOS RETIDOS (+48h):</b><br><br>• <b>FRN-9090:</b> Frontier (Motor) - OS #4510<br>• <b>KKS-2024:</b> Kicks (Funilaria) - OS #4622<br>• <b>VRS-1122:</b> Versa (Elétrica) - OS #4701<br>• <b>FRN-4433:</b> Frontier (Freios) - OS #4815<br><br><b>Perda Estimada: R$ 38.200</b>",
+        eficiencia: "<b>⚙️ Eficiência Técnica</b><br>Meta Fábrica: 90%. Real: 84.2%.<br>Roberto e Sérgio operando abaixo de 65%.",
+        forecast: "<b>🔮 Forecast</b><br>Projeção de fechamento: <b>R$ 522.000</b> (104.4%)."
+    };
+
+    function showTip(key) {
+        const tip = document.getElementById('global-tip');
+        tip.innerHTML = infoDicas[key] || key;
+        tip.style.display = 'block';
+    }
+    function hideTip() { document.getElementById('global-tip').style.display = 'none'; }
+    function moveTip(e) {
+        const tip = document.getElementById('global-tip');
+        tip.style.left = (e.clientX + 20) + 'px'; tip.style.top = (e.clientY + 20) + 'px';
+    }
+
+    function changeTab(tab) {
+        document.getElementById('snd-click').play();
+        document.getElementById('view-dash').classList.toggle('hidden', tab === 'oper');
+        document.getElementById('view-oper').classList.toggle('hidden', tab === 'dash');
+        document.getElementById('btn-dash').classList.toggle('active', tab === 'dash');
+        document.getElementById('btn-oper').classList.toggle('active', tab === 'oper');
+    }
+
+    function renderRanking(filter = 'all') {
+        const list = document.getElementById('ranking-list');
+        let data = filter === 'all' ? [...operacaoData] : operacaoData.filter(d => d.s.includes(filter));
+        data.sort((a,b) => parseFloat(b.v.replace(/\D/g,'')) - parseFloat(a.v.replace(/\D/g,'')));
+        list.innerHTML = data.slice(0,5).map((d, i) => `
+            <li style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px;" onmouseover="showTip('Técnico: ${d.t}<br>Valor: ${d.v}')" onmouseout="hideTip()">
+                <span><b style="color:var(--red); font-family:Orbitron; margin-right:10px;">${i === 0 ? '🥇' : i+1+'º'}</b> ${d.t}</span>
+                <span style="font-family:Orbitron; color:#fff;">${d.v}</span>
+            </li>
+        `).join('');
+    }
+
+    window.onload = () => {
+        // Logs de Boot Visual
+        const logs = ["> LINK ESTABELECIDO...", "> SINCRONIZANDO BANCO...", "> CALCULANDO KPIS...", "> IOC OPERACIONAL."];
+        let ix = 0; setInterval(() => { if(ix < logs.length) document.getElementById('boot-logs').innerText = logs[ix++]; }, 700);
+
+        const body = document.getElementById('op-body');
+        body.innerHTML = operacaoData.map(d => `
+            <tr onmouseover="showTip('${d.d}')" onmouseout="hideTip()">
+                <td><b>${d.t}</b><br><span style="font-size:9px; color:#555;">Setor: ${d.s.split(' / ')[0]}</span></td>
+                <td style="font-family:Orbitron;">${d.m}</td>
+                <td>${d.s} ${d.prio === 'EXPRESSA' ? '<br><span style="font-size:8px; background:var(--red); color:white; padding:1px 3px; border-radius:2px;">PRIORIDADE MÁXIMA</span>' : ''}</td>
+                <td style="color:#fff; font-family:Orbitron;"><b>${d.v}</b></td>
+                <td>
+                    <div style="font-size:10px; font-family:Orbitron; color:${d.e > 80 ? 'var(--success)' : 'var(--danger)'}">${d.e}%</div>
+                    <div class="ef-bar-bg"><div class="ef-bar-fill" style="width:${d.e}%; background:var(--${d.e > 80 ? 'success' : 'danger'})"></div></div>
+                </td>
+                <td><span class="status-pill ${d.st === 'Produzindo' ? 'pill-prod' : d.st === 'Atraso' ? 'pill-delay' : 'pill-parts'}">${d.st}</span></td>
+                <td><span class="dot" style="background:var(--${d.c})"></span><b style="color:var(--${d.c}); font-family:Orbitron; font-size:11px;">${d.p}</b></td>
+            </tr>
+        `).join('');
+
+        const barWrap = document.getElementById('bar-wrap');
+        const agenda = [{d:'SEG',v:18,h:40}, {d:'TER',v:25,h:55}, {d:'QUA',v:42,h:95,s:1}, {d:'QUI',v:30,h:65}, {d:'SEX',v:20,h:45}];
+        barWrap.innerHTML = agenda.map(a => `
+            <div class="bar-item ${a.s?'highlight':''}" style="height:${a.h}%" onmouseover="showTip('${a.d}: ${a.v} Agendados')" onmouseout="hideTip()">
+                <div class="bar-val" style="${a.s?'color:var(--red)':''}">${a.v}</div>
+                <div class="bar-day">${a.d}</div>
+            </div>
+        `).join('');
+
+        renderRanking();
+
+        // FECHAR VINHETA E ABRIR PAINEL
+        setTimeout(() => {
+            const splash = document.getElementById('splash');
+            splash.style.transform = 'translateY(-100%)'; // Move para cima
+            setTimeout(() => { 
+                splash.style.display = 'none'; // Remove totalmente
+                document.getElementById('g-fill').style.transform = 'rotate(170deg)'; // Gira o gráfico
+            }, 1500);
+        }, 4000);
+    }
+</script>
+</body>
+</html>
