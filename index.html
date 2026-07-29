@@ -132,6 +132,19 @@
         .rank-pct-fill { height: 100%; background: var(--success); }
         .rank-empty { padding: 20px; text-align: center; color: #555; font-size: 11px; }
 
+        /* Tendência (vs período anterior) */
+        .trend-badge { font-family: 'Orbitron'; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 4px; display: inline-block; }
+        .trend-up { color: var(--success); background: rgba(16, 185, 129, 0.12); }
+        .trend-down { color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+        .trend-neutral { color: #888; background: rgba(255,255,255,0.05); }
+        .trend-note { font-size: 9.5px; color: #666; margin-left: 6px; }
+
+        /* Filtro de período */
+        input[type="date"] { background: #15171a; color: #fff; border: 1px solid var(--border); padding: 6px 8px; border-radius: 4px; font-size: 11px; font-family: 'Orbitron'; color-scheme: dark; }
+        input[type="text"].search-input { background: #15171a; color: #fff; border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; font-size: 11.5px; min-width: 220px; }
+        input[type="text"].search-input::placeholder { color: #666; }
+        #periodo-custom-wrap { display: flex; gap: 8px; align-items: center; }
+
         #sync-status { font-size: 10px; font-family: 'Orbitron'; color: #666; margin-top: 4px; }
         #refresh-btn { cursor: pointer; background: transparent; border: 1px solid var(--red); color: var(--red); font-size: 9px; padding: 4px 10px; font-family: 'Orbitron'; border-radius: 4px; margin-left: 8px; }
         #refresh-btn:hover { background: rgba(193,18,31,0.15); }
@@ -162,12 +175,6 @@
         </div>
 
         <div style="text-align: right">
-            <select id="filtro-situacao" onchange="renderTabela()">
-                <option value="all">TODAS AS SITUAÇÕES</option>
-                <option value="aceito">ACEITOS</option>
-                <option value="rejeitado">REJEITADOS</option>
-                <option value="pendente">PENDENTES</option>
-            </select>
             <div id="sync-status">Conectando à planilha...</div>
         </div>
     </header>
@@ -189,6 +196,24 @@
             <div id="view-dash">
                 <div class="global-filters">
                     <div class="filter-group">
+                        <label for="filtro-periodo">Período</label>
+                        <select id="filtro-periodo" onchange="onPeriodoChange()">
+                            <option value="all">TODO O PERÍODO</option>
+                            <option value="hoje">HOJE</option>
+                            <option value="7d">ÚLTIMOS 7 DIAS</option>
+                            <option value="30d">ÚLTIMOS 30 DIAS</option>
+                            <option value="mes">ESTE MÊS</option>
+                            <option value="ano">ESTE ANO</option>
+                            <option value="custom">PERSONALIZADO</option>
+                        </select>
+                    </div>
+                    <div class="filter-group hidden" id="periodo-custom-wrap">
+                        <label>De</label>
+                        <input type="date" id="data-de" onchange="render()">
+                        <label>Até</label>
+                        <input type="date" id="data-ate" onchange="render()">
+                    </div>
+                    <div class="filter-group">
                         <label for="filtro-consultor">Consultor Técnico</label>
                         <select id="filtro-consultor" onchange="render()">
                             <option value="all">TODOS</option>
@@ -209,21 +234,25 @@
                         <h3>Total Orçamentado</h3>
                         <div class="val" id="kpi-total">R$ 0</div>
                         <div style="color:#3498db; font-size:11px; font-weight:bold; margin-top:5px;" id="kpi-total-sub">-- orçamentos</div>
+                        <div style="margin-top:6px;" id="kpi-total-trend"></div>
                     </div>
                     <div class="card" onmouseover="showTip('ticket')" onmouseout="hideTip()">
                         <h3>Ticket Médio</h3>
                         <div class="val" id="kpi-ticket">R$ 0</div>
                         <div style="color:var(--red); font-size:11px; font-weight:bold; margin-top:5px;" id="kpi-ticket-sub">--</div>
+                        <div style="margin-top:6px;" id="kpi-ticket-trend"></div>
                     </div>
                     <div class="card alert-blink" onmouseover="showTip('retencao')" onmouseout="hideTip()">
                         <h3>Aguardando Cobrança</h3>
                         <div class="val" style="color:var(--red)" id="kpi-cobranca">0</div>
                         <div style="color:var(--red); font-size:11px; font-weight:bold; margin-top:5px;">⚠️ Rejeitados sem recontato</div>
+                        <div style="margin-top:6px;" id="kpi-cobranca-trend"></div>
                     </div>
                     <div class="card" onmouseover="showTip('eficiencia')" onmouseout="hideTip()">
                         <h3>Taxa de Aprovação</h3>
                         <div class="val" id="kpi-aprovacao">0%</div>
                         <div style="color:#3498db; font-size:11px; font-weight:bold; margin-top:5px;" id="kpi-aprovacao-sub">-- aceitos / -- total</div>
+                        <div style="margin-top:6px;" id="kpi-aprovacao-trend"></div>
                     </div>
                 </div>
 
@@ -312,7 +341,19 @@
             <div id="view-oper" class="hidden">
                 <div class="op-table-wrap">
                     <div class="filters-row">
-                        <span style="font-size:11px; color:#888; font-family:'Orbitron';" id="tabela-contador">-- registros</span>
+                        <div class="filter-group">
+                            <label for="filtro-situacao">Situação</label>
+                            <select id="filtro-situacao" onchange="renderTabela()">
+                                <option value="all">TODAS</option>
+                                <option value="aceito">ACEITOS</option>
+                                <option value="rejeitado">REJEITADOS</option>
+                                <option value="pendente">PENDENTES</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <input type="text" class="search-input" id="busca-tabela" placeholder="🔎 Buscar por placa, cliente, modelo ou chassi..." oninput="renderTabela()">
+                        </div>
+                        <span style="font-size:11px; color:#888; font-family:'Orbitron'; margin-left:auto;" id="tabela-contador">-- registros</span>
                     </div>
                     <table>
                         <thead>
@@ -367,6 +408,81 @@
         return { cls: 'pill-parts', color: 'warning', label: s || 'Pendente' };
     }
 
+    function parseDataBR(str) {
+        if (!str) return null;
+        const partes = str.trim().split(/[\/\-]/);
+        if (partes.length !== 3) return null;
+        let [d, m, y] = partes.map(p => parseInt(p, 10));
+        if (!d || !m || !y) return null;
+        if (y < 100) y += 2000;
+        const dt = new Date(y, m - 1, d);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    function onPeriodoChange() {
+        toggleCustomDate();
+        render();
+    }
+
+    function toggleCustomDate() {
+        const show = document.getElementById('filtro-periodo').value === 'custom';
+        document.getElementById('periodo-custom-wrap').classList.toggle('hidden', !show);
+    }
+
+    function getPeriodoSelecionado() {
+        const preset = document.getElementById('filtro-periodo').value;
+        const hoje = new Date(); hoje.setHours(23, 59, 59, 999);
+        const inicioHoje = new Date(hoje); inicioHoje.setHours(0, 0, 0, 0);
+        if (preset === 'all') return null;
+        if (preset === 'hoje') return { start: inicioHoje, end: hoje };
+        if (preset === '7d') { const s = new Date(inicioHoje); s.setDate(s.getDate() - 6); return { start: s, end: hoje }; }
+        if (preset === '30d') { const s = new Date(inicioHoje); s.setDate(s.getDate() - 29); return { start: s, end: hoje }; }
+        if (preset === 'mes') { const s = new Date(hoje.getFullYear(), hoje.getMonth(), 1); return { start: s, end: hoje }; }
+        if (preset === 'ano') { const s = new Date(hoje.getFullYear(), 0, 1); return { start: s, end: hoje }; }
+        if (preset === 'custom') {
+            const deVal = document.getElementById('data-de').value;
+            const ateVal = document.getElementById('data-ate').value;
+            if (!deVal && !ateVal) return null;
+            const s = deVal ? new Date(deVal + 'T00:00:00') : null;
+            const e = ateVal ? new Date(ateVal + 'T23:59:59') : null;
+            return { start: s, end: e };
+        }
+        return null;
+    }
+
+    function getPeriodoAnterior(periodo) {
+        if (!periodo || !periodo.start || !periodo.end) return null;
+        const durMs = periodo.end.getTime() - periodo.start.getTime();
+        const prevEnd = new Date(periodo.start.getTime() - 1);
+        const prevStart = new Date(prevEnd.getTime() - durMs);
+        return { start: prevStart, end: prevEnd };
+    }
+
+    function filtrarPorPeriodo(data, periodo) {
+        if (!periodo) return data;
+        return data.filter(o => {
+            const d = parseDataBR(o.data);
+            if (!d) return false;
+            if (periodo.start && d < periodo.start) return false;
+            if (periodo.end && d > periodo.end) return false;
+            return true;
+        });
+    }
+
+    function trendBadge(curr, prev, invert) {
+        if (prev === null || prev === undefined) return '';
+        if (prev === 0) {
+            if (curr === 0) return '';
+            return `<span class="trend-badge trend-neutral">novo</span><span class="trend-note">vs período anterior</span>`;
+        }
+        const pct = ((curr - prev) / Math.abs(prev)) * 100;
+        const up = pct >= 0;
+        const good = invert ? !up : up;
+        const arrow = up ? '▲' : '▼';
+        const cls = Math.abs(pct) < 0.05 ? 'trend-neutral' : (good ? 'trend-up' : 'trend-down');
+        return `<span class="trend-badge ${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</span><span class="trend-note">vs período anterior</span>`;
+    }
+
     async function fetchSheet() {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&_=${Date.now()}`;
         const res = await fetch(url);
@@ -407,15 +523,26 @@
     function limparFiltros() {
         document.getElementById('filtro-consultor').value = 'all';
         document.getElementById('filtro-mecanico').value = 'all';
+        document.getElementById('filtro-periodo').value = 'all';
+        document.getElementById('data-de').value = '';
+        document.getElementById('data-ate').value = '';
+        toggleCustomDate();
         render();
     }
 
     function getFilteredOrcamentos() {
         const fConsultor = document.getElementById('filtro-consultor').value;
         const fMecanico = document.getElementById('filtro-mecanico').value;
+        const periodo = getPeriodoSelecionado();
         return orcamentos.filter(o => {
             if (fConsultor !== 'all' && o.consultor !== fConsultor) return false;
             if (fMecanico !== 'all' && o.mecanico !== fMecanico) return false;
+            if (periodo) {
+                const d = parseDataBR(o.data);
+                if (!d) return false;
+                if (periodo.start && d < periodo.start) return false;
+                if (periodo.end && d > periodo.end) return false;
+            }
             return true;
         });
     }
@@ -456,9 +583,14 @@
 
         const fConsultor = document.getElementById('filtro-consultor').value;
         const fMecanico = document.getElementById('filtro-mecanico').value;
+        const periodoSel = document.getElementById('filtro-periodo').value;
         const tags = [];
         if (fConsultor !== 'all') tags.push('Consultor: ' + fConsultor);
         if (fMecanico !== 'all') tags.push('Mecânico: ' + fMecanico);
+        if (periodoSel !== 'all') {
+            const labelsPeriodo = { hoje: 'Hoje', '7d': 'Últimos 7 dias', '30d': 'Últimos 30 dias', mes: 'Este mês', ano: 'Este ano', custom: 'Período personalizado' };
+            tags.push('Período: ' + (labelsPeriodo[periodoSel] || periodoSel));
+        }
         document.getElementById('filtros-ativos-tag').innerText = tags.length ? ('● Filtrando por ' + tags.join(' + ')) : '';
 
         const total = dataFiltrada.length;
@@ -478,6 +610,33 @@
         document.getElementById('kpi-cobranca').innerText = aguardandoCobranca.length;
         document.getElementById('kpi-aprovacao').innerText = taxaAprovacao.toFixed(1) + '%';
         document.getElementById('kpi-aprovacao-sub').innerText = aceitos.length + ' aceitos / ' + decididos + ' decididos';
+
+        // Tendência vs período anterior equivalente (só quando um período concreto está selecionado)
+        const periodoAtual = getPeriodoSelecionado();
+        const periodoAnterior = getPeriodoAnterior(periodoAtual);
+        const trendIds = ['kpi-total-trend', 'kpi-ticket-trend', 'kpi-cobranca-trend', 'kpi-aprovacao-trend'];
+        if (periodoAnterior) {
+            const baseSemData = orcamentos.filter(o =>
+                (fConsultor === 'all' || o.consultor === fConsultor) &&
+                (fMecanico === 'all' || o.mecanico === fMecanico)
+            );
+            const dataAnterior = filtrarPorPeriodo(baseSemData, periodoAnterior);
+            const totalAnterior = dataAnterior.length;
+            const totalValorAnterior = dataAnterior.reduce((s, o) => s + o.totalOrcamento, 0);
+            const aceitosAnt = dataAnterior.filter(o => situacaoInfo(o.situacao).color === 'success');
+            const rejeitadosAnt = dataAnterior.filter(o => situacaoInfo(o.situacao).color === 'danger');
+            const decididosAnt = aceitosAnt.length + rejeitadosAnt.length;
+            const taxaAprovacaoAnt = decididosAnt ? (aceitosAnt.length / decididosAnt * 100) : null;
+            const ticketMedioAnt = totalAnterior ? (totalValorAnterior / totalAnterior) : null;
+            const aguardandoCobrancaAnt = rejeitadosAnt.filter(o => !o.dataRecontato || o.dataRecontato.trim() === '');
+
+            document.getElementById('kpi-total-trend').innerHTML = trendBadge(totalValor, totalValorAnterior, false);
+            document.getElementById('kpi-ticket-trend').innerHTML = trendBadge(ticketMedio, ticketMedioAnt, false);
+            document.getElementById('kpi-cobranca-trend').innerHTML = trendBadge(aguardandoCobranca.length, aguardandoCobrancaAnt.length, true);
+            document.getElementById('kpi-aprovacao-trend').innerHTML = (taxaAprovacaoAnt === null) ? '' : trendBadge(taxaAprovacao, taxaAprovacaoAnt, false);
+        } else {
+            trendIds.forEach(id => document.getElementById(id).innerHTML = '');
+        }
 
         document.getElementById('meta-fill').style.width = taxaAprovacao + '%';
         document.getElementById('meta-label').innerText = aceitos.length + ' aceitos / ' + fmtMoeda(totalValor);
@@ -622,9 +781,14 @@
 
     function renderTabela(dataBase) {
         const filtro = document.getElementById('filtro-situacao').value;
+        const busca = (document.getElementById('busca-tabela').value || '').trim().toLowerCase();
         let data = (dataBase || getFilteredOrcamentos()).filter(o => {
-            if (filtro === 'all') return true;
-            return situacaoInfo(o.situacao).color === (filtro === 'aceito' ? 'success' : filtro === 'rejeitado' ? 'danger' : 'warning');
+            if (filtro !== 'all' && situacaoInfo(o.situacao).color !== (filtro === 'aceito' ? 'success' : filtro === 'rejeitado' ? 'danger' : 'warning')) return false;
+            if (busca) {
+                const alvo = `${o.placa} ${o.cliente} ${o.modelo} ${o.chassi}`.toLowerCase();
+                if (!alvo.includes(busca)) return false;
+            }
+            return true;
         });
         document.getElementById('tabela-contador').innerText = data.length + ' registro(s)';
         const body = document.getElementById('op-body');
