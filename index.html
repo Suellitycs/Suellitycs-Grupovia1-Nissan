@@ -74,7 +74,7 @@
         .diag-solucao { font-size: 10px; font-weight: bold; color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 6px 10px; border-radius: 4px; border-left: 3px solid var(--success); display: inline-block; }
 
         /* Gráficos */
-        .charts-row { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 25px; }
+        .charts-row { display: grid; grid-template-columns: 1fr 2fr; gap: 25px; }
         .chart-card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); min-height: 380px; display: flex; flex-direction: column; align-items: center; }
         .chart-card h4 { font-size: 13px; font-family: 'Orbitron'; margin-bottom: 20px; align-self: flex-start; border-left: 4px solid var(--red); padding-left: 15px; color: #fff; }
 
@@ -102,6 +102,35 @@
 
         .hidden { display: none; }
         select { background: #15171a; color: #fff; border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; font-size: 11px; font-family: 'Orbitron'; }
+
+        /* Filtros Globais */
+        .global-filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
+        .global-filters label { font-size: 10px; color: #666; font-family: 'Orbitron'; text-transform: uppercase; margin-right: 6px; }
+        .filter-group { display: flex; align-items: center; }
+        #btn-limpar-filtros { cursor: pointer; background: transparent; border: 1px solid var(--border); color: #888; font-size: 10px; padding: 6px 12px; font-family: 'Orbitron'; border-radius: 4px; }
+        #btn-limpar-filtros:hover { border-color: var(--red); color: #fff; }
+        .filtros-ativos-tag { font-size: 10px; color: var(--red); font-family: 'Orbitron'; }
+
+        /* Linha do tempo (gráfico de evolução) */
+        .evo-svg-wrap { width: 100%; margin-top: 10px; }
+        .evo-point { cursor: help; }
+        .evo-point circle { transition: 0.3s; }
+        .evo-point:hover circle { r: 6; }
+
+        /* Rankings com indicadores */
+        .rankings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 25px; }
+        .rank-card { background: var(--card-bg); padding: 22px; border-radius: 12px; border: 1px solid var(--border); }
+        .rank-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .rank-card-head h4 { font-size: 13px; font-family: 'Orbitron'; border-left: 4px solid var(--red); padding-left: 15px; color: #fff; }
+        .rank-table-wrap { overflow-x: auto; }
+        .rank-table { width: 100%; border-collapse: collapse; }
+        .rank-table th { text-align: left; padding: 10px 12px; font-size: 9px; font-family: 'Orbitron'; color: #666; text-transform: uppercase; border-bottom: 2px solid var(--border); white-space: nowrap; }
+        .rank-table td { padding: 11px 12px; font-size: 11.5px; color: #ccc; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; }
+        .rank-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .rank-pos { font-family: 'Orbitron'; color: var(--red); font-weight: bold; margin-right: 8px; }
+        .rank-pct-bar { display: inline-block; width: 50px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+        .rank-pct-fill { height: 100%; background: var(--success); }
+        .rank-empty { padding: 20px; text-align: center; color: #555; font-size: 11px; }
 
         #sync-status { font-size: 10px; font-family: 'Orbitron'; color: #666; margin-top: 4px; }
         #refresh-btn { cursor: pointer; background: transparent; border: 1px solid var(--red); color: var(--red); font-size: 9px; padding: 4px 10px; font-family: 'Orbitron'; border-radius: 4px; margin-left: 8px; }
@@ -158,6 +187,23 @@
 
             <!-- DASHBOARD -->
             <div id="view-dash">
+                <div class="global-filters">
+                    <div class="filter-group">
+                        <label for="filtro-consultor">Consultor Técnico</label>
+                        <select id="filtro-consultor" onchange="render()">
+                            <option value="all">TODOS</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filtro-mecanico">Mecânico</label>
+                        <select id="filtro-mecanico" onchange="render()">
+                            <option value="all">TODOS</option>
+                        </select>
+                    </div>
+                    <button id="btn-limpar-filtros" onclick="limparFiltros()">✕ LIMPAR FILTROS</button>
+                    <span class="filtros-ativos-tag" id="filtros-ativos-tag"></span>
+                </div>
+
                 <div class="kpi-grid">
                     <div class="card" onmouseover="showTip('faturamento')" onmouseout="hideTip()">
                         <h3>Total Orçamentado</h3>
@@ -197,16 +243,67 @@
                         </div>
                     </div>
 
-                    <div class="chart-card">
-                        <h4>Orçamentos por Dia (últimos)</h4>
-                        <div class="bar-chart-wrap" id="bar-wrap"></div>
+                    <div class="chart-card" style="align-items:stretch;">
+                        <h4>Evolução de Orçamentos por Dia (últimos 7)</h4>
+                        <div class="evo-svg-wrap" id="evo-wrap"></div>
+                    </div>
+                </div>
+
+                <div class="rankings-row">
+                    <div class="rank-card">
+                        <div class="rank-card-head">
+                            <h4>🏆 Ranking Consultores Técnicos</h4>
+                            <div class="filter-group">
+                                <label for="sort-consultor">Ordenar por</label>
+                                <select id="sort-consultor" onchange="render()">
+                                    <option value="valor">Valor de Serviços</option>
+                                    <option value="qtd">Quantidade de Orçamentos</option>
+                                    <option value="pct">% de Aprovação</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="rank-table-wrap">
+                            <table class="rank-table">
+                                <thead>
+                                    <tr>
+                                        <th>Consultor</th>
+                                        <th>Qtd. Orçamentos</th>
+                                        <th>Valor Serviços</th>
+                                        <th>Valor Aprovado</th>
+                                        <th>% Aprovação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rank-consultor-body"></tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <div class="chart-card">
-                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center; margin-bottom:15px">
-                            <h4>🏆 Ranking Consultores</h4>
+                    <div class="rank-card">
+                        <div class="rank-card-head">
+                            <h4>🔧 Ranking Mecânicos</h4>
+                            <div class="filter-group">
+                                <label for="sort-mecanico">Ordenar por</label>
+                                <select id="sort-mecanico" onchange="render()">
+                                    <option value="valor">Valor de Serviços</option>
+                                    <option value="qtd">Quantidade de Orçamentos</option>
+                                    <option value="pct">% de Aprovação</option>
+                                </select>
+                            </div>
                         </div>
-                        <ul class="ranking-list" id="ranking-list" style="list-style:none; width:100%;"></ul>
+                        <div class="rank-table-wrap">
+                            <table class="rank-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mecânico</th>
+                                        <th>Qtd. Orçamentos</th>
+                                        <th>Valor Serviços</th>
+                                        <th>Valor Aprovado</th>
+                                        <th>% Aprovação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rank-mecanico-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -292,11 +389,43 @@
         }).filter(o => o.placa && o.placa.trim() !== '');
     }
 
+    function populateSelect(id, values) {
+        const el = document.getElementById(id);
+        const current = el.value;
+        el.innerHTML = '<option value="all">TODOS</option>' +
+            values.map(v => `<option value="${v.replace(/"/g,'&quot;')}">${v}</option>`).join('');
+        if (values.includes(current)) el.value = current;
+    }
+
+    function populateFiltros(data) {
+        const consultores = [...new Set(data.map(o => o.consultor).filter(v => v && v.trim() !== ''))].sort();
+        const mecanicos = [...new Set(data.map(o => o.mecanico).filter(v => v && v.trim() !== ''))].sort();
+        populateSelect('filtro-consultor', consultores);
+        populateSelect('filtro-mecanico', mecanicos);
+    }
+
+    function limparFiltros() {
+        document.getElementById('filtro-consultor').value = 'all';
+        document.getElementById('filtro-mecanico').value = 'all';
+        render();
+    }
+
+    function getFilteredOrcamentos() {
+        const fConsultor = document.getElementById('filtro-consultor').value;
+        const fMecanico = document.getElementById('filtro-mecanico').value;
+        return orcamentos.filter(o => {
+            if (fConsultor !== 'all' && o.consultor !== fConsultor) return false;
+            if (fMecanico !== 'all' && o.mecanico !== fMecanico) return false;
+            return true;
+        });
+    }
+
     async function loadDashboard() {
         const statusEl = document.getElementById('sync-status');
         statusEl.innerText = '🔄 Sincronizando com o Sheets...';
         try {
             orcamentos = await fetchSheet();
+            populateFiltros(orcamentos);
             document.getElementById('error-banner').style.display = 'none';
             render();
             statusEl.innerText = '✅ Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
@@ -323,11 +452,20 @@
     }
 
     function render() {
-        const total = orcamentos.length;
-        const totalValor = orcamentos.reduce((s, o) => s + o.totalOrcamento, 0);
-        const aceitos = orcamentos.filter(o => situacaoInfo(o.situacao).color === 'success');
-        const rejeitados = orcamentos.filter(o => situacaoInfo(o.situacao).color === 'danger');
-        const pendentes = orcamentos.filter(o => situacaoInfo(o.situacao).color === 'warning');
+        const dataFiltrada = getFilteredOrcamentos();
+
+        const fConsultor = document.getElementById('filtro-consultor').value;
+        const fMecanico = document.getElementById('filtro-mecanico').value;
+        const tags = [];
+        if (fConsultor !== 'all') tags.push('Consultor: ' + fConsultor);
+        if (fMecanico !== 'all') tags.push('Mecânico: ' + fMecanico);
+        document.getElementById('filtros-ativos-tag').innerText = tags.length ? ('● Filtrando por ' + tags.join(' + ')) : '';
+
+        const total = dataFiltrada.length;
+        const totalValor = dataFiltrada.reduce((s, o) => s + o.totalOrcamento, 0);
+        const aceitos = dataFiltrada.filter(o => situacaoInfo(o.situacao).color === 'success');
+        const rejeitados = dataFiltrada.filter(o => situacaoInfo(o.situacao).color === 'danger');
+        const pendentes = dataFiltrada.filter(o => situacaoInfo(o.situacao).color === 'warning');
         const decididos = aceitos.length + rejeitados.length;
         const taxaAprovacao = decididos ? (aceitos.length / decididos * 100) : 0;
         const ticketMedio = total ? (totalValor / total) : 0;
@@ -348,19 +486,20 @@
         document.getElementById('g-fill').style.transform = 'rotate(' + (taxaAprovacao / 100 * 180) + 'deg)';
 
         renderDiagnostico(rejeitados, pendentes, totalValor, aguardandoCobranca);
-        renderBarras();
-        renderRanking();
+        renderEvolucao(dataFiltrada);
+        renderRankingPessoa('consultor', 'rank-consultor-body', document.getElementById('sort-consultor').value, dataFiltrada);
+        renderRankingPessoa('mecanico', 'rank-mecanico-body', document.getElementById('sort-mecanico').value, dataFiltrada);
 
         window.infoDicas = {
             meta: `<b>🎯 Aprovação de Orçamentos</b><br>Aceitos: <b>${aceitos.length}</b><br>Rejeitados: <b>${rejeitados.length}</b><br>Pendentes: <b>${pendentes.length}</b>`,
-            faturamento: `<b>💰 Total Orçamentado</b><br>Serviços: ${fmtMoeda(orcamentos.reduce((s,o)=>s+o.totalServicos,0))}<br>Peças: ${fmtMoeda(orcamentos.reduce((s,o)=>s+o.totalPecas,0))}`,
+            faturamento: `<b>💰 Total Orçamentado</b><br>Serviços: ${fmtMoeda(dataFiltrada.reduce((s,o)=>s+o.totalServicos,0))}<br>Peças: ${fmtMoeda(dataFiltrada.reduce((s,o)=>s+o.totalPecas,0))}`,
             ticket: `<b>📈 Ticket Médio</b><br>Calculado sobre ${total} orçamentos.`,
             retencao: `<b>⚠️ Aguardando Cobrança (${aguardandoCobranca.length})</b><br>` + aguardandoCobranca.slice(0,6).map(o => `• <b>${o.placa}:</b> ${o.modelo} - ${o.motivoRejeicao || 'sem motivo'}`).join('<br>'),
             eficiencia: `<b>⚙️ Taxa de Aprovação</b><br>${taxaAprovacao.toFixed(1)}% sobre ${decididos} orçamentos decididos.`,
             forecast: `<b>🔮 Aceitos x Rejeitados</b><br>Aceitos: ${aceitos.length}<br>Rejeitados: ${rejeitados.length}`
         };
 
-        renderTabela();
+        renderTabela(dataFiltrada);
     }
 
     function renderDiagnostico(rejeitados, pendentes, totalValor, aguardandoCobranca) {
@@ -393,48 +532,97 @@
         `;
     }
 
-    function renderBarras() {
+    function renderEvolucao(data) {
         const porDia = {};
-        orcamentos.forEach(o => { if (o.data) porDia[o.data] = (porDia[o.data] || 0) + 1; });
+        data.forEach(o => { if (o.data) porDia[o.data] = (porDia[o.data] || 0) + 1; });
         const dias = Object.keys(porDia).sort((a, b) => {
             const pa = a.split('/').reverse().join('');
             const pb = b.split('/').reverse().join('');
             return pa.localeCompare(pb);
-        }).slice(-5);
+        }).slice(-7);
+
+        const wrap = document.getElementById('evo-wrap');
+        if (dias.length === 0) {
+            wrap.innerHTML = '<div class="rank-empty">Sem dados para o período/filtro selecionado.</div>';
+            return;
+        }
+
+        const W = 760, H = 210, padL = 30, padR = 20, padT = 30, padB = 30;
         const max = Math.max(1, ...dias.map(d => porDia[d]));
-        const barWrap = document.getElementById('bar-wrap');
-        barWrap.innerHTML = dias.map((d, i) => `
-            <div class="bar-item ${i === dias.length - 1 ? 'highlight' : ''}" style="height:${(porDia[d]/max*100)}%" onmouseover="showTip('${d}: ${porDia[d]} orçamento(s)')" onmouseout="hideTip()">
-                <div class="bar-val" style="${i === dias.length-1 ? 'color:var(--red)' : ''}">${porDia[d]}</div>
-                <div class="bar-day">${d}</div>
-            </div>
-        `).join('');
+        const stepX = dias.length > 1 ? (W - padL - padR) / (dias.length - 1) : 0;
+        const xAt = i => padL + stepX * i;
+        const yAt = v => H - padB - (v / max) * (H - padT - padB);
+
+        const pts = dias.map((d, i) => ({ x: xAt(i), y: yAt(porDia[d]), d, v: porDia[d] }));
+        const linePath = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+        const areaPath = linePath + ` L${pts[pts.length-1].x.toFixed(1)},${(H-padB).toFixed(1)} L${pts[0].x.toFixed(1)},${(H-padB).toFixed(1)} Z`;
+
+        const svg = `
+        <svg viewBox="0 0 ${W} ${H}" width="100%" height="220" preserveAspectRatio="none" style="overflow:visible;">
+            <defs>
+                <linearGradient id="evoGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#C1121F" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#C1121F" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            <line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+            <path d="${areaPath}" fill="url(#evoGrad)" stroke="none"/>
+            <path d="${linePath}" fill="none" stroke="#C1121F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            ${pts.map((p, i) => `
+                <g class="evo-point" onmouseover="showTip('${p.d}: ${p.v} orçamento(s)')" onmouseout="hideTip()">
+                    <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${i === pts.length-1 ? '#C1121F' : '#0f1114'}" stroke="#C1121F" stroke-width="2"/>
+                    <text x="${p.x.toFixed(1)}" y="${(p.y-14).toFixed(1)}" text-anchor="middle" font-family="Orbitron" font-size="12" font-weight="700" fill="#fff">${p.v}</text>
+                    <text x="${p.x.toFixed(1)}" y="${H-10}" text-anchor="middle" font-family="Orbitron" font-size="9" fill="#666">${p.d}</text>
+                </g>
+            `).join('')}
+        </svg>`;
+        wrap.innerHTML = svg;
     }
 
-    function renderRanking() {
-        const porConsultor = {};
-        orcamentos.forEach(o => {
-            const k = o.consultor || '—';
-            porConsultor[k] = porConsultor[k] || { valor: 0, qtd: 0 };
-            porConsultor[k].valor += o.totalOrcamento;
-            porConsultor[k].qtd++;
+    function renderRankingPessoa(campo, elId, sortBy, data) {
+        const grupos = {};
+        data.forEach(o => {
+            const k = (o[campo] || '').trim() || '—';
+            grupos[k] = grupos[k] || { qtd: 0, valorServicos: 0, valorAprovado: 0, aceitos: 0, decididos: 0 };
+            grupos[k].qtd++;
+            grupos[k].valorServicos += o.totalServicos;
+            const cor = situacaoInfo(o.situacao).color;
+            if (cor === 'success') { grupos[k].valorAprovado += o.totalServicos; grupos[k].aceitos++; grupos[k].decididos++; }
+            else if (cor === 'danger') { grupos[k].decididos++; }
         });
-        const ranking = Object.entries(porConsultor)
-            .map(([nome, d]) => ({ nome, ...d }))
-            .sort((a, b) => b.valor - a.valor)
-            .slice(0, 5);
-        const list = document.getElementById('ranking-list');
-        list.innerHTML = ranking.map((d, i) => `
-            <li style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px;" onmouseover="showTip('${d.nome}<br>Orçamentos: ${d.qtd}')" onmouseout="hideTip()">
-                <span><b style="color:var(--red); font-family:Orbitron; margin-right:10px;">${i === 0 ? '🥇' : i+1+'º'}</b> ${d.nome}</span>
-                <span style="font-family:Orbitron; color:#fff;">${fmtMoeda(d.valor)}</span>
-            </li>
+
+        let ranking = Object.entries(grupos)
+            .filter(([nome]) => nome !== '—')
+            .map(([nome, d]) => ({ nome, ...d, pct: d.decididos ? (d.aceitos / d.decididos * 100) : 0 }));
+
+        ranking.sort((a, b) => {
+            if (sortBy === 'qtd') return b.qtd - a.qtd;
+            if (sortBy === 'pct') return b.pct - a.pct;
+            return b.valorServicos - a.valorServicos;
+        });
+
+        const body = document.getElementById(elId);
+        if (ranking.length === 0) {
+            body.innerHTML = `<tr><td colspan="5" class="rank-empty">Sem dados para o período/filtro selecionado.</td></tr>`;
+            return;
+        }
+        body.innerHTML = ranking.map((r, i) => `
+            <tr onmouseover="showTip('${r.nome}<br>Qtd: ${r.qtd}<br>Valor serviços: ${fmtMoeda(r.valorServicos)}<br>Aprovação: ${r.pct.toFixed(1)}%')" onmouseout="hideTip()">
+                <td><span class="rank-pos">${i === 0 ? '🥇' : (i+1)+'º'}</span>${r.nome}</td>
+                <td style="font-family:Orbitron;">${r.qtd}</td>
+                <td style="font-family:Orbitron; color:#fff;">${fmtMoeda(r.valorServicos)}</td>
+                <td style="font-family:Orbitron; color:var(--success);">${fmtMoeda(r.valorAprovado)}</td>
+                <td>
+                    <span class="rank-pct-bar"><span class="rank-pct-fill" style="width:${Math.min(100, r.pct)}%"></span></span>
+                    ${r.pct.toFixed(1)}%
+                </td>
+            </tr>
         `).join('');
     }
 
-    function renderTabela() {
+    function renderTabela(dataBase) {
         const filtro = document.getElementById('filtro-situacao').value;
-        let data = orcamentos.filter(o => {
+        let data = (dataBase || getFilteredOrcamentos()).filter(o => {
             if (filtro === 'all') return true;
             return situacaoInfo(o.situacao).color === (filtro === 'aceito' ? 'success' : filtro === 'rejeitado' ? 'danger' : 'warning');
         });
