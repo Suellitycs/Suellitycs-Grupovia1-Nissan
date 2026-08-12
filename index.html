@@ -68,7 +68,7 @@
 
         /* Diagnóstico Estratégico */
         .diag-box { background: linear-gradient(145deg, rgba(30,32,35,0.9), rgba(15,17,20,0.9)); border-radius: 12px; padding: 25px; margin-bottom: 25px; border-top: 3px solid var(--red); }
-        .diag-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; }
+        .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 25px; }
         .diag-item h4 { color: var(--red); font-size: 12px; font-family: 'Orbitron'; margin-bottom: 10px; text-transform: uppercase; }
         .diag-item p { font-size: 11.5px; color: #aaa; line-height: 1.5; margin-bottom: 8px; }
         .diag-solucao { font-size: 10px; font-weight: bold; color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 6px 10px; border-radius: 4px; border-left: 3px solid var(--success); display: inline-block; }
@@ -214,6 +214,12 @@
                         <input type="date" id="data-ate" onchange="render()">
                     </div>
                     <div class="filter-group">
+                        <label for="filtro-loja">Loja</label>
+                        <select id="filtro-loja" onchange="render()">
+                            <option value="all">TODAS</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
                         <label for="filtro-consultor">Consultor Técnico</label>
                         <select id="filtro-consultor" onchange="render()">
                             <option value="all">TODOS</option>
@@ -278,7 +284,40 @@
                     </div>
                 </div>
 
+                <div class="chart-card" style="align-items:stretch; min-height:auto; margin-bottom:25px;" onmouseover="showTip('porloja')" onmouseout="hideTip()">
+                    <h4>🏬 Faturamento por Loja</h4>
+                    <div class="bar-chart-wrap" id="loja-chart-wrap" style="margin-top:40px;"></div>
+                </div>
+
                 <div class="rankings-row">
+                    <div class="rank-card" style="grid-column: 1 / -1;">
+                        <div class="rank-card-head">
+                            <h4>🏬 Ranking por Loja</h4>
+                            <div class="filter-group">
+                                <label for="sort-loja">Ordenar por</label>
+                                <select id="sort-loja" onchange="render()">
+                                    <option value="valor">Valor de Serviços</option>
+                                    <option value="qtd">Quantidade de Orçamentos</option>
+                                    <option value="pct">% de Aprovação</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="rank-table-wrap">
+                            <table class="rank-table">
+                                <thead>
+                                    <tr>
+                                        <th>Loja</th>
+                                        <th>Qtd. Orçamentos</th>
+                                        <th>Valor Serviços</th>
+                                        <th>Valor Aprovado</th>
+                                        <th>% Aprovação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rank-loja-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="rank-card">
                         <div class="rank-card-head">
                             <h4>🏆 Ranking Consultores Técnicos</h4>
@@ -359,6 +398,7 @@
                         <thead>
                             <tr>
                                 <th>Data / Cliente</th>
+                                <th>Loja</th>
                                 <th>Veículo / Placa</th>
                                 <th>Consultor / Orçamentista</th>
                                 <th>Valor Total</th>
@@ -376,11 +416,31 @@
 <script>
     // ======= CONFIGURAÇÃO DA FONTE DE DADOS (Google Sheets) =======
     const SHEET_ID = '1UF_uO9o0kiyAmjWDEDvLAAgJiNTuUhk9c4rP1mcbELY';
-    const GID = '2111212661';
+    const SHEET_NAME = 'Base'; // lê a base bruta (uma linha por item) e consolida no navegador, sempre fresca
     const REFRESH_MS = 60000; // atualiza sozinho a cada 60s
+
+    // Loja de cada consultor. Atualize aqui se entrar um novo consultor ou loja no grupo.
+    const LOJA_POR_CONSULTOR = {
+        'moab marcelino da silva': 'Imbiribeira',
+        'leandra maria da silva andrade dantas': 'Imbiribeira',
+        'plinio brito de souza': 'Afogados',
+        'renata souza borges': 'Afogados',
+        'amanda regina oliveira da silva': 'Piedade',
+        'luana paula batista da silveira': 'Caxangá'
+    };
+
+    function normalizaChave(str) {
+        return (str || '').toString().trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function getLoja(consultor) {
+        return LOJA_POR_CONSULTOR[normalizaChave(consultor)] || 'Não mapeado';
+    }
 
     let orcamentos = [];
     let firstLoad = true;
+    let colunasNaoEncontradas = [];
 
     function fmtMoeda(v) {
         return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -483,26 +543,94 @@
         return `<span class="trend-badge ${cls}">${arrow} ${Math.abs(pct).toFixed(1)}%</span><span class="trend-note">vs período anterior</span>`;
     }
 
+    // Candidatos de cabeçalho aceitos por campo (normalizados, sem acento). O código nunca
+    // assume a posição da coluna: ele lê o cabeçalho de cada coluna e casa pelo nome, então a
+    // ordem das colunas na planilha pode mudar sem quebrar o painel.
+    const CAMPOS = {
+        data: ['data'],
+        consultor: ['consultor'],
+        orcamentista: ['orcamentista'],
+        mecanico: ['mecanico'],
+        cliente: ['cliente'],
+        placa: ['placa'],
+        chassi: ['chassi'],
+        modelo: ['modelo'],
+        anoModelo: ['ano/modelo', 'ano modelo', 'anomodelo'],
+        problema: ['descricao/problema', 'descricao problema', 'problema'],
+        totalServicos: ['total de servico', 'total servico'],
+        totalPecas: ['total de pecas', 'total pecas'],
+        totalOrcamento: ['total'],
+        situacao: ['situacao'],
+        dataRetorno: ['data retorno cliente', 'data retorno'],
+        motivoRejeicao: ['motivo rejeicao'],
+        observacoesMotivo: ['observacoes motivo reprova', 'observacoes motivo'],
+        statusAlerta: ['status envio']
+    };
+
+    function construirMapaColunas(cols) {
+        const mapa = {};
+        const usados = new Set();
+        (cols || []).forEach((col, i) => {
+            const label = normalizaChave(col.label);
+            if (!label) return;
+            for (const campo in CAMPOS) {
+                if (mapa[campo] !== undefined) continue;
+                if (CAMPOS[campo].some(cand => label === cand)) { mapa[campo] = i; usados.add(campo); }
+            }
+        });
+        colunasNaoEncontradas = Object.keys(CAMPOS).filter(c => mapa[c] === undefined);
+        return mapa;
+    }
+
     async function fetchSheet() {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}&_=${Date.now()}`;
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&_=${Date.now()}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
         const json = JSON.parse(jsonStr);
+        const cols = (json.table && json.table.cols) || [];
         const rows = (json.table && json.table.rows) || [];
-        return rows.map(r => {
+        const M = construirMapaColunas(cols);
+        if (M.placa === undefined || M.totalOrcamento === undefined) {
+            throw new Error('Não encontrei as colunas essenciais (Placa/Total) na aba "' + SHEET_NAME + '". Verifique se os cabeçalhos da planilha não foram renomeados.');
+        }
+
+        // A aba "Base" traz uma linha por serviço e uma linha por peça. Cada orçamento (por
+        // problema relatado) termina numa linha "TOTAL ACUMULADO: <problema>", que já carrega o
+        // total de serviços + peças e a situação final. É essa linha — e só ela — que conta como
+        // um orçamento; as linhas de item abaixo dela seriam contadas de novo e infladas o painel.
+        const orcamentosList = [];
+        rows.forEach(r => {
             const c = r.c || [];
-            return {
-                data: cellText(c[0]), consultor: cellText(c[1]), orcamentista: cellText(c[2]),
-                mecanico: cellText(c[3]), cliente: cellText(c[4]), placa: cellText(c[5]),
-                chassi: cellText(c[6]), modelo: cellText(c[7]), anoModelo: cellText(c[8]),
-                problema: cellText(c[9]), servicos: cellText(c[10]), pecas: cellText(c[11]),
-                totalServicos: cellNum(c[12]), totalPecas: cellNum(c[13]), totalOrcamento: cellNum(c[14]),
-                situacao: cellText(c[15]), dataRetorno: cellText(c[16]), motivoRejeicao: cellText(c[17]),
-                dataRecontato: cellText(c[18]), aprovadoPosContato: cellText(c[19]), statusAlerta: cellText(c[20])
-            };
-        }).filter(o => o.placa && o.placa.trim() !== '');
+            const problemaBruto = cellText(c[M.problema]);
+            if (!problemaBruto.toUpperCase().startsWith('TOTAL ACUMULADO')) return;
+            const placa = cellText(c[M.placa]);
+            if (!placa.trim()) return;
+            const consultor = cellText(c[M.consultor]);
+            orcamentosList.push({
+                data: cellText(c[M.data]),
+                consultor,
+                orcamentista: cellText(c[M.orcamentista]),
+                mecanico: cellText(c[M.mecanico]),
+                cliente: cellText(c[M.cliente]),
+                placa,
+                chassi: cellText(c[M.chassi]),
+                modelo: cellText(c[M.modelo]),
+                anoModelo: cellText(c[M.anoModelo]),
+                problema: problemaBruto.replace(/^TOTAL ACUMULADO:\s*/i, ''),
+                totalServicos: cellNum(c[M.totalServicos]),
+                totalPecas: cellNum(c[M.totalPecas]),
+                totalOrcamento: cellNum(c[M.totalOrcamento]),
+                situacao: cellText(c[M.situacao]),
+                dataRetorno: cellText(c[M.dataRetorno]),
+                motivoRejeicao: cellText(c[M.motivoRejeicao]),
+                observacoesMotivo: cellText(c[M.observacoesMotivo]),
+                statusAlerta: cellText(c[M.statusAlerta]),
+                loja: getLoja(consultor)
+            });
+        });
+        return orcamentosList;
     }
 
     function populateSelect(id, values) {
@@ -514,13 +642,16 @@
     }
 
     function populateFiltros(data) {
+        const lojas = [...new Set(data.map(o => o.loja).filter(v => v && v.trim() !== ''))].sort();
         const consultores = [...new Set(data.map(o => o.consultor).filter(v => v && v.trim() !== ''))].sort();
         const mecanicos = [...new Set(data.map(o => o.mecanico).filter(v => v && v.trim() !== ''))].sort();
+        populateSelect('filtro-loja', lojas);
         populateSelect('filtro-consultor', consultores);
         populateSelect('filtro-mecanico', mecanicos);
     }
 
     function limparFiltros() {
+        document.getElementById('filtro-loja').value = 'all';
         document.getElementById('filtro-consultor').value = 'all';
         document.getElementById('filtro-mecanico').value = 'all';
         document.getElementById('filtro-periodo').value = 'all';
@@ -531,10 +662,12 @@
     }
 
     function getFilteredOrcamentos() {
+        const fLoja = document.getElementById('filtro-loja').value;
         const fConsultor = document.getElementById('filtro-consultor').value;
         const fMecanico = document.getElementById('filtro-mecanico').value;
         const periodo = getPeriodoSelecionado();
         return orcamentos.filter(o => {
+            if (fLoja !== 'all' && o.loja !== fLoja) return false;
             if (fConsultor !== 'all' && o.consultor !== fConsultor) return false;
             if (fMecanico !== 'all' && o.mecanico !== fMecanico) return false;
             if (periodo) {
@@ -555,7 +688,10 @@
             populateFiltros(orcamentos);
             document.getElementById('error-banner').style.display = 'none';
             render();
-            statusEl.innerText = '✅ Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+            const aviso = colunasNaoEncontradas.length
+                ? ' · ⚠️ coluna(s) não encontrada(s): ' + colunasNaoEncontradas.join(', ')
+                : '';
+            statusEl.innerText = '✅ Atualizado às ' + new Date().toLocaleTimeString('pt-BR') + aviso;
         } catch (err) {
             console.error(err);
             statusEl.innerText = '⚠️ Falha na última sincronização';
@@ -581,10 +717,12 @@
     function render() {
         const dataFiltrada = getFilteredOrcamentos();
 
+        const fLoja = document.getElementById('filtro-loja').value;
         const fConsultor = document.getElementById('filtro-consultor').value;
         const fMecanico = document.getElementById('filtro-mecanico').value;
         const periodoSel = document.getElementById('filtro-periodo').value;
         const tags = [];
+        if (fLoja !== 'all') tags.push('Loja: ' + fLoja);
         if (fConsultor !== 'all') tags.push('Consultor: ' + fConsultor);
         if (fMecanico !== 'all') tags.push('Mecânico: ' + fMecanico);
         if (periodoSel !== 'all') {
@@ -601,7 +739,9 @@
         const decididos = aceitos.length + rejeitados.length;
         const taxaAprovacao = decididos ? (aceitos.length / decididos * 100) : 0;
         const ticketMedio = total ? (totalValor / total) : 0;
-        const aguardandoCobranca = rejeitados.filter(o => !o.dataRecontato || o.dataRecontato.trim() === '');
+        // "Status Envio" indica se o e-mail de cobrança já foi disparado ao consultor para esse
+        // rejeitado (ver G-Bot). Vazio ou "Não Enviado" = ainda falta cobrar.
+        const aguardandoCobranca = rejeitados.filter(o => (o.statusAlerta || '').trim().toLowerCase() !== 'enviado');
 
         document.getElementById('kpi-total').innerText = fmtMoeda(totalValor);
         document.getElementById('kpi-total-sub').innerText = total + ' orçamentos no período';
@@ -617,6 +757,7 @@
         const trendIds = ['kpi-total-trend', 'kpi-ticket-trend', 'kpi-cobranca-trend', 'kpi-aprovacao-trend'];
         if (periodoAnterior) {
             const baseSemData = orcamentos.filter(o =>
+                (fLoja === 'all' || o.loja === fLoja) &&
                 (fConsultor === 'all' || o.consultor === fConsultor) &&
                 (fMecanico === 'all' || o.mecanico === fMecanico)
             );
@@ -628,7 +769,7 @@
             const decididosAnt = aceitosAnt.length + rejeitadosAnt.length;
             const taxaAprovacaoAnt = decididosAnt ? (aceitosAnt.length / decididosAnt * 100) : null;
             const ticketMedioAnt = totalAnterior ? (totalValorAnterior / totalAnterior) : null;
-            const aguardandoCobrancaAnt = rejeitadosAnt.filter(o => !o.dataRecontato || o.dataRecontato.trim() === '');
+            const aguardandoCobrancaAnt = rejeitadosAnt.filter(o => (o.statusAlerta || '').trim().toLowerCase() !== 'enviado');
 
             document.getElementById('kpi-total-trend').innerHTML = trendBadge(totalValor, totalValorAnterior, false);
             document.getElementById('kpi-ticket-trend').innerHTML = trendBadge(ticketMedio, ticketMedioAnt, false);
@@ -644,8 +785,10 @@
         document.getElementById('gauge-val').innerText = taxaAprovacao.toFixed(0) + '%';
         document.getElementById('g-fill').style.transform = 'rotate(' + (taxaAprovacao / 100 * 180) + 'deg)';
 
-        renderDiagnostico(rejeitados, pendentes, totalValor, aguardandoCobranca);
+        renderDiagnostico(rejeitados, pendentes, totalValor, aguardandoCobranca, dataFiltrada);
         renderEvolucao(dataFiltrada);
+        renderLojaChart(dataFiltrada);
+        renderRankingPessoa('loja', 'rank-loja-body', document.getElementById('sort-loja').value, dataFiltrada);
         renderRankingPessoa('consultor', 'rank-consultor-body', document.getElementById('sort-consultor').value, dataFiltrada);
         renderRankingPessoa('mecanico', 'rank-mecanico-body', document.getElementById('sort-mecanico').value, dataFiltrada);
 
@@ -655,13 +798,14 @@
             ticket: `<b>📈 Ticket Médio</b><br>Calculado sobre ${total} orçamentos.`,
             retencao: `<b>⚠️ Aguardando Cobrança (${aguardandoCobranca.length})</b><br>` + aguardandoCobranca.slice(0,6).map(o => `• <b>${o.placa}:</b> ${o.modelo} - ${o.motivoRejeicao || 'sem motivo'}`).join('<br>'),
             eficiencia: `<b>⚙️ Taxa de Aprovação</b><br>${taxaAprovacao.toFixed(1)}% sobre ${decididos} orçamentos decididos.`,
-            forecast: `<b>🔮 Aceitos x Rejeitados</b><br>Aceitos: ${aceitos.length}<br>Rejeitados: ${rejeitados.length}`
+            forecast: `<b>🔮 Aceitos x Rejeitados</b><br>Aceitos: ${aceitos.length}<br>Rejeitados: ${rejeitados.length}`,
+            porloja: `<b>🏬 Faturamento por Loja</b><br>Passe o mouse em cada barra para ver o valor exato.`
         };
 
         renderTabela(dataFiltrada);
     }
 
-    function renderDiagnostico(rejeitados, pendentes, totalValor, aguardandoCobranca) {
+    function renderDiagnostico(rejeitados, pendentes, totalValor, aguardandoCobranca, dataFiltrada) {
         const motivoCount = {};
         rejeitados.forEach(o => { const m = o.motivoRejeicao || 'Não informado'; motivoCount[m] = (motivoCount[m] || 0) + 1; });
         const topMotivo = Object.entries(motivoCount).sort((a,b)=>b[1]-a[1])[0];
@@ -670,6 +814,20 @@
         const porConsultorPend = {};
         pendentes.forEach(o => { const k = o.consultor || '—'; porConsultorPend[k] = (porConsultorPend[k]||0)+1; });
         const topPendente = Object.entries(porConsultorPend).sort((a,b)=>b[1]-a[1])[0];
+
+        const porLoja = {};
+        (dataFiltrada || []).forEach(o => {
+            const k = o.loja || 'Não mapeado';
+            porLoja[k] = porLoja[k] || { valor: 0, aceitos: 0, decididos: 0 };
+            porLoja[k].valor += o.totalOrcamento;
+            const cor = situacaoInfo(o.situacao).color;
+            if (cor === 'success') { porLoja[k].aceitos++; porLoja[k].decididos++; }
+            else if (cor === 'danger') { porLoja[k].decididos++; }
+        });
+        const lojasComTaxa = Object.entries(porLoja)
+            .map(([nome, d]) => ({ nome, ...d, pct: d.decididos ? (d.aceitos / d.decididos * 100) : null }))
+            .filter(l => l.pct !== null);
+        const piorLoja = lojasComTaxa.sort((a,b)=>a.pct-b.pct)[0];
 
         const grid = document.getElementById('diag-grid');
         grid.innerHTML = `
@@ -680,15 +838,44 @@
             </div>
             <div class="diag-item">
                 <h4>⚠️ COBRANÇA PENDENTE</h4>
-                <p>Causa: ${aguardandoCobranca.length} orçamento(s) rejeitado(s) ainda sem data de recontato registrada.</p>
-                <div class="diag-solucao">Ação: Priorizar recontato dos clientes na aba "Orçamentos".</div>
+                <p>Causa: ${aguardandoCobranca.length} orçamento(s) rejeitado(s) ainda sem cobrança enviada ao consultor.</p>
+                <div class="diag-solucao">Ação: Rodar "Enviar E-mail de Cobrança aos Consultores" no G-Bot.</div>
             </div>
             <div class="diag-item">
                 <h4>🎯 ACOMPANHAMENTO</h4>
                 <p>Causa: <b>${topPendente ? topPendente[0] : 'Sem dados'}</b> tem ${topPendente ? topPendente[1] : 0} orçamento(s) pendente(s) de retorno do cliente.</p>
                 <div class="diag-solucao">Ação: Acionar o consultor para fechar posição desses orçamentos.</div>
             </div>
+            <div class="diag-item">
+                <h4>🏬 LOJA COM MENOR APROVAÇÃO</h4>
+                <p>Causa: <b>${piorLoja ? piorLoja.nome : 'Sem dados'}</b> está com ${piorLoja ? piorLoja.pct.toFixed(1) : '0'}% de aprovação no período filtrado.</p>
+                <div class="diag-solucao">Ação: Comparar motivos de rejeição dessa loja com as demais.</div>
+            </div>
         `;
+    }
+
+    function renderLojaChart(data) {
+        const porLoja = {};
+        data.forEach(o => {
+            const k = o.loja || 'Não mapeado';
+            porLoja[k] = (porLoja[k] || 0) + o.totalOrcamento;
+        });
+        const entradas = Object.entries(porLoja).sort((a,b)=>b[1]-a[1]);
+        const wrap = document.getElementById('loja-chart-wrap');
+        if (entradas.length === 0) {
+            wrap.innerHTML = '<div class="rank-empty">Sem dados para o período/filtro selecionado.</div>';
+            return;
+        }
+        const max = Math.max(1, ...entradas.map(e => e[1]));
+        wrap.innerHTML = entradas.map(([loja, valor], i) => {
+            const alturaPct = Math.max(2, (valor / max) * 100);
+            return `
+                <div class="bar-item ${i === 0 ? 'highlight' : ''}" style="height:${alturaPct}%;"
+                    onmouseover="showTip('${loja}<br>${fmtMoeda(valor)}')" onmouseout="hideTip()">
+                    <span class="bar-val">${fmtMoeda(valor).replace('R$','').trim()}</span>
+                    <span class="bar-day">${loja}</span>
+                </div>`;
+        }).join('');
     }
 
     function renderEvolucao(data) {
@@ -797,6 +984,7 @@
             return `
             <tr onmouseover="showTip('<b>Problema:</b> ${(o.problema||'').replace(/'/g,"&#39;").slice(0,300)}')" onmouseout="hideTip()">
                 <td><b>${o.data}</b><br><span style="font-size:10px; color:#888;">${o.cliente}</span></td>
+                <td style="font-family:Orbitron; font-size:11px;">${o.loja}</td>
                 <td><b>${o.modelo}</b><br><span style="font-size:10px; color:#888; font-family:Orbitron;">${o.placa}</span></td>
                 <td>${o.consultor}<br><span style="font-size:9px; color:#666;">${o.orcamentista}</span></td>
                 <td style="color:#fff; font-family:Orbitron;"><b>${fmtMoeda(o.totalOrcamento)}</b></td>
