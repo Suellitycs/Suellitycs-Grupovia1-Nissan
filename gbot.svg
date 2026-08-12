@@ -1,22 +1,37 @@
-<svg viewBox="0 0 340 380" xmlns="http://www.w3.org/2000/svg">
+<svg class="gbot-mark" viewBox="0 0 340 380" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0.3" y2="1">
+    <linearGradient id="bodyGrad-splash" x1="0.1" y1="0" x2="0.9" y2="1">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#DBDFE5"/>
+      <stop offset="55%" stop-color="#EBEEF2"/>
+      <stop offset="100%" stop-color="#C7CCD3"/>
     </linearGradient>
-    <linearGradient id="darkGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#33363C"/>
-      <stop offset="100%" stop-color="#14161A"/>
+    <linearGradient id="darkGrad-splash" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3d4047"/>
+      <stop offset="55%" stop-color="#202226"/>
+      <stop offset="100%" stop-color="#0c0d0f"/>
     </linearGradient>
-    <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#C1121F" stop-opacity="0.30"/>
+    <radialGradient id="ringGlow-splash" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C1121F" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#C1121F" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="specular-splash" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="visorGrad-splash" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c1e22"/>
+      <stop offset="100%" stop-color="#040405"/>
+    </linearGradient>
+    <filter id="softShadow-splash" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="blurSm-splash"><feGaussianBlur stdDeviation="4"/></filter>
   </defs>
 
   <!-- flourish: brilho + anel aberto + linhas de velocidade -->
-  <circle cx="168" cy="205" r="150" fill="url(#ringGlow)"/>
+  <circle cx="168" cy="205" r="158" fill="url(#ringGlow-splash)"/>
   <path d="M 232.3 76.9 A 138 138 0 1 1 48.7 156.9" fill="none" stroke="#C1121F" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
+  <path d="M 232.3 76.9 A 138 138 0 1 1 48.7 156.9" fill="none" stroke="#ff5b66" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
   <g stroke="#C1121F" stroke-width="6" stroke-linecap="round" opacity="0.85">
     <line x1="6" y1="252" x2="48" y2="252"/>
     <line x1="2" y1="270" x2="40" y2="270"/>
@@ -24,53 +39,58 @@
   </g>
 
   <!-- sombra de apoio -->
-  <ellipse cx="168" cy="352" rx="78" ry="12" fill="#000" opacity="0.35"/>
+  <ellipse cx="168" cy="354" rx="82" ry="13" fill="#000" opacity="0.4" filter="url(#blurSm-splash)"/>
 
-  <!-- antena -->
-  <line x1="168" y1="28" x2="168" y2="60" stroke="#3a3d43" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="168" cy="22" r="11" fill="#C1121F"/>
-  <circle cx="164" cy="18" r="3.2" fill="#ff8b8b" opacity="0.85"/>
+  <g filter="url(#softShadow-splash)">
+    <!-- antena -->
+    <line x1="168" y1="28" x2="168" y2="60" stroke="#4a4d53" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="168" cy="22" r="11" fill="#C1121F"/>
+    <circle cx="163" cy="17" r="3.6" fill="#ff9b9b" opacity="0.9"/>
 
-  <!-- cabeca -->
-  <rect x="88" y="56" width="160" height="118" rx="52" fill="url(#bodyGrad)" stroke="#B9BEC6" stroke-width="1.5"/>
-  <path d="M 108 70 Q 168 52 228 70" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="90" cy="116" r="15" fill="url(#darkGrad)"/>
-  <circle cx="246" cy="116" r="15" fill="url(#darkGrad)"/>
-  <circle cx="90" cy="116" r="5" fill="#54575d"/>
-  <circle cx="246" cy="116" r="5" fill="#54575d"/>
+    <!-- cabeca -->
+    <rect x="88" y="56" width="160" height="118" rx="52" fill="url(#bodyGrad-splash)" stroke="#AEB4BD" stroke-width="1.5"/>
+    <ellipse cx="130" cy="82" rx="34" ry="20" fill="url(#specular-splash)" opacity="0.8"/>
+    <circle cx="90" cy="116" r="15" fill="url(#darkGrad-splash)"/>
+    <circle cx="246" cy="116" r="15" fill="url(#darkGrad-splash)"/>
+    <circle cx="86" cy="112" r="4.5" fill="#6b6f76"/>
+    <circle cx="242" cy="112" r="4.5" fill="#6b6f76"/>
 
-  <!-- visor / tela -->
-  <rect x="111" y="86" width="114" height="62" rx="22" fill="#0D0E10" stroke="#3a3d43" stroke-width="2"/>
-  <text x="148" y="130" font-family="Space Grotesk, sans-serif" font-size="42" font-weight="700" fill="#C1121F" text-anchor="middle">G</text>
-  <rect x="190" y="120" width="18" height="6" rx="3" fill="#C1121F" opacity="0.85"/>
+    <!-- visor / tela -->
+    <rect x="111" y="86" width="114" height="62" rx="22" fill="url(#visorGrad-splash)" stroke="#000" stroke-width="2"/>
+    <rect x="115" y="90" width="106" height="22" rx="11" fill="#ffffff" opacity="0.06"/>
+    <text x="148" y="130" font-family="Space Grotesk, sans-serif" font-size="42" font-weight="700" fill="#E31E2B" text-anchor="middle">G</text>
+    <text x="148" y="130" font-family="Space Grotesk, sans-serif" font-size="42" font-weight="700" fill="#ff4550" text-anchor="middle" opacity="0.5" filter="url(#blurSm-splash)">G</text>
+    <rect x="190" y="120" width="18" height="6" rx="3" fill="#E31E2B" opacity="0.9"/>
 
-  <!-- pescoco -->
-  <rect x="148" y="170" width="40" height="20" rx="8" fill="#c7cbd1"/>
+    <!-- pescoco -->
+    <rect x="148" y="170" width="40" height="20" rx="8" fill="#b9bec6"/>
 
-  <!-- torso -->
-  <rect x="78" y="186" width="180" height="152" rx="48" fill="url(#bodyGrad)" stroke="#B9BEC6" stroke-width="1.5"/>
-  <circle cx="96" cy="204" r="24" fill="url(#darkGrad)"/>
-  <circle cx="240" cy="204" r="24" fill="url(#darkGrad)"/>
+    <!-- torso -->
+    <rect x="78" y="186" width="180" height="152" rx="48" fill="url(#bodyGrad-splash)" stroke="#AEB4BD" stroke-width="1.5"/>
+    <ellipse cx="120" cy="212" rx="44" ry="26" fill="url(#specular-splash)" opacity="0.55"/>
+    <circle cx="96" cy="204" r="24" fill="url(#darkGrad-splash)"/>
+    <circle cx="240" cy="204" r="24" fill="url(#darkGrad-splash)"/>
 
-  <text x="168" y="246" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5" fill="#8a8f97" text-anchor="middle">EUROVIA</text>
-  <text x="168" y="262" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5" fill="#8a8f97" text-anchor="middle">NISSAN</text>
+    <text x="168" y="246" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5" fill="#767c85" text-anchor="middle">EUROVIA</text>
+    <text x="168" y="262" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5" fill="#767c85" text-anchor="middle">NISSAN</text>
 
-  <!-- braco -->
-  <path d="M 100 238 C 66 250, 46 278, 46 308" fill="none" stroke="url(#darkGrad)" stroke-width="27" stroke-linecap="round"/>
+    <!-- braco -->
+    <path d="M 100 238 C 66 250, 46 278, 46 308" fill="none" stroke="url(#darkGrad-splash)" stroke-width="27" stroke-linecap="round"/>
 
-  <!-- mao (garra simples) -->
-  <g fill="url(#darkGrad)">
-    <circle cx="46" cy="312" r="16"/>
-    <circle cx="34" cy="322" r="8"/>
-    <circle cx="48" cy="328" r="8"/>
-    <circle cx="61" cy="321" r="8"/>
-  </g>
+    <!-- mao (garra simples) -->
+    <g fill="url(#darkGrad-splash)">
+      <circle cx="46" cy="312" r="16"/>
+      <circle cx="34" cy="322" r="8"/>
+      <circle cx="48" cy="328" r="8"/>
+      <circle cx="61" cy="321" r="8"/>
+    </g>
 
-  <!-- envelope -->
-  <g transform="translate(-2,268) rotate(-10)">
-    <rect x="6" y="6" width="90" height="60" rx="7" fill="#F4F5F7" stroke="#B9BEC6" stroke-width="2"/>
-    <path d="M8 8 L51 44 L94 8" fill="none" stroke="#B9BEC6" stroke-width="2.5"/>
-    <circle cx="51" cy="46" r="15" fill="#C1121F"/>
-    <path d="M43 46 h16 M46 41 l5 5 -5 5 M56 41 l5 5 -5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- envelope -->
+    <g transform="translate(-2,268) rotate(-10)">
+      <rect x="6" y="6" width="90" height="60" rx="7" fill="#F4F5F7" stroke="#AEB4BD" stroke-width="2"/>
+      <path d="M8 8 L51 44 L94 8" fill="none" stroke="#AEB4BD" stroke-width="2.5"/>
+      <circle cx="51" cy="46" r="15" fill="#E31E2B"/>
+      <path d="M43 46 h16 M46 41 l5 5 -5 5 M56 41 l5 5 -5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
   </g>
 </svg>
