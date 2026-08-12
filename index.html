@@ -1188,8 +1188,8 @@ function render() {
     document.getElementById('kpi-ticket-sub').innerText = aceitos.length + ' aceitos · ' + rejeitados.length + ' rejeitados';
     document.getElementById('kpi-cobranca').innerText = aguardandoCobranca.length;
     document.getElementById('card-cobranca').classList.toggle('active', aguardandoCobranca.length > 0);
-    document.getElementById('kpi-aprovacao').innerText = taxaAprovacao.toFixed(1) + '%';
-    document.getElementById('kpi-aprovacao-sub').innerText = aceitos.length + ' aceitos / ' + decididos + ' decididos';
+    document.getElementById('kpi-aprovacao').innerText = decididos ? (taxaAprovacao.toFixed(1) + '%') : '—';
+    document.getElementById('kpi-aprovacao-sub').innerText = decididos ? (aceitos.length + ' aceitos / ' + decididos + ' decididos') : 'nenhum orçamento decidido ainda';
 
     const periodoAtual = getPeriodoSelecionado();
     const periodoAnterior = getPeriodoAnterior(periodoAtual);
@@ -1234,7 +1234,7 @@ function render() {
         faturamento: `<b>Total orçamentado</b><br>Serviços: ${fmtMoeda(dataFiltrada.reduce((s,o)=>s+o.totalServicos,0))}<br>Peças: ${fmtMoeda(dataFiltrada.reduce((s,o)=>s+o.totalPecas,0))}`,
         ticket: `<b>Ticket médio</b><br>Calculado sobre ${total} orçamentos.`,
         retencao: `<b>Aguardando cobrança (${aguardandoCobranca.length})</b><br>` + aguardandoCobranca.slice(0,6).map(o => `• <b>${o.placa}:</b> ${o.modelo} - ${o.motivoRejeicao || 'sem motivo'}`).join('<br>'),
-        eficiencia: `<b>Taxa de aprovação</b><br>${taxaAprovacao.toFixed(1)}% sobre ${decididos} orçamentos decididos.`,
+        eficiencia: decididos ? `<b>Taxa de aprovação</b><br>${taxaAprovacao.toFixed(1)}% sobre ${decididos} orçamentos decididos.` : `<b>Taxa de aprovação</b><br>Nenhum orçamento aceito ou rejeitado ainda neste filtro (só pendentes).`,
         forecast: `<b>Aceitos x rejeitados</b><br>Aceitos: ${aceitos.length}<br>Rejeitados: ${rejeitados.length}`,
         porloja: `<b>Faturamento por loja</b><br>Passe o mouse em cada barra para ver o valor exato.`
     };
@@ -1277,11 +1277,11 @@ function renderRankingPessoa(campo, elId, sortBy, data) {
 
     let ranking = Object.entries(grupos)
         .filter(([nome]) => nome !== '—')
-        .map(([nome, d]) => ({ nome, ...d, pct: d.decididos ? (d.aceitos / d.decididos * 100) : 0 }));
+        .map(([nome, d]) => ({ nome, ...d, pct: d.decididos ? (d.aceitos / d.decididos * 100) : null }));
 
     ranking.sort((a, b) => {
         if (sortBy === 'qtd') return b.qtd - a.qtd;
-        if (sortBy === 'pct') return b.pct - a.pct;
+        if (sortBy === 'pct') return (b.pct ?? -1) - (a.pct ?? -1);
         return b.valorServicos - a.valorServicos;
     });
 
@@ -1290,15 +1290,19 @@ function renderRankingPessoa(campo, elId, sortBy, data) {
         body.innerHTML = `<tr><td colspan="5" class="rank-empty">Sem dados para o período/filtro selecionado.</td></tr>`;
         return;
     }
-    body.innerHTML = ranking.map((r, i) => `
-        <tr onmouseover="showTip('${r.nome}<br>Qtd: ${r.qtd}<br>Valor serviços: ${fmtMoeda(r.valorServicos)}<br>Aprovação: ${r.pct.toFixed(1)}%')" onmouseout="hideTip()">
+    body.innerHTML = ranking.map((r, i) => {
+        // decididos=0 significa "ainda sem orçamento aceito ou rejeitado" (só pendente), não "0% de aprovação"
+        const pctLabel = r.pct === null ? '— sem decisão' : r.pct.toFixed(1) + '%';
+        const pctBar = r.pct === null ? '' : `<span class="rank-pct-bar"><span class="rank-pct-fill" style="width:${Math.min(100, r.pct)}%"></span></span>`;
+        return `
+        <tr onmouseover="showTip('${r.nome}<br>Qtd: ${r.qtd}<br>Valor serviços: ${fmtMoeda(r.valorServicos)}<br>Aprovação: ${pctLabel}')" onmouseout="hideTip()">
             <td><span class="rank-pos">${i+1}º</span>${r.nome}</td>
             <td class="tabular">${r.qtd}</td>
             <td class="tabular" style="color:#fff;">${fmtMoeda(r.valorServicos)}</td>
             <td class="tabular" style="color:var(--green);">${fmtMoeda(r.valorAprovado)}</td>
-            <td><span class="rank-pct-bar"><span class="rank-pct-fill" style="width:${Math.min(100, r.pct)}%"></span></span>${r.pct.toFixed(1)}%</td>
-        </tr>
-    `).join('');
+            <td>${pctBar}${pctLabel}</td>
+        </tr>`;
+    }).join('');
 }
 
 function renderTabela(dataBase) {
